@@ -1,90 +1,69 @@
 (ns fs-watcher.core
-  (:require [clara.rules :refer :all]
-            [clojure.data :refer [diff]]
-            [clojure.string :as string]
-            [clojure.java.io :as io]))
+  (:require
+   [fs-watcher.watchers.local-filesystem :as watchers.local]
+   [fs-watcher.watcher :as watcher]
+   [clojure.java.io :as io]
+   [fs-watcher.rules :as rules]
+   [clojure.tools.logging :as log]))
 
-(defprotocol FileSystem
-  (connect [this] "connect to the tracked filesystem")
-  (poll [this] "fetch the current state")
-  (disconnect [this] "close the connection"))
+;; Erroring thread should not silently die
+(Thread/setDefaultUncaughtExceptionHandler
+ (reify Thread$UncaughtExceptionHandler
+   (uncaughtException [_ thread ex]
+     (log/error ex "Uncaught exception on" (.getName thread)))))
 
-
-(def file-system-atom
+(def system*
   (atom {}))
 
-(defrecord LocalFileSystem [root-directory]
-  FileSystem
-  (connect [this]
-    (let [potential-dir (io/file (:root-directory this))
-          dir-exists? (and (.exists potential-dir) (.isDirectory potential-dir))]
-      (swap! file-system-atom assoc :connected? dir-exists?)))
+(def watcher-type->constructor
+  {:local watchers.local/->LocalFileSystemWatcher})
 
-  (poll [this]
-    (println "polling local fs")
-    (println (diff (:state @file-system-atom)
-                   (swap! ))
-             )
-    (set (.list (io/file (:root-directory this)))))
-
-  (disconnect [_]
-    ; nothing to do
-    (swap! file-system-atom assoc
-           :disconnect! true
-           :connected? false)))
-
-
-(def xx (->LocalFileSystem "test/examplefs"))
-
-(connect xx)
-
-(poll xx)
-
-(disconnect xx)
-
-(defn run []
-  (let [fs (->LocalFileSystem "test/examplefs")]
+(defn main-loop
+  [{:keys [interval connection-settings watcher-type]}]
+  (reset! system* {:fs-state #{}
+                   :interval interval
+                   :connection-settings connection-settings
+                   :watcher-type watcher-type
+                   :rules rules/rules})
+  (let [watcher-constructor (watcher-type->constructor watcher-type)
+        fs (watcher-constructor system*)]
+    (watcher/connect fs)
     (loop []
-      (if (:disconnect! @file-system-atom)
-        (println "stopped!")
-        (do
-          (Thread/sleep 1000)
-          (poll fs)
-          (recur))))))
+      (if (:disconnect! @system*)
+        (watcher/disconnect fs)
+        ;; else continue 
+        (do (Thread/sleep interval)
+            (watcher/poll fs)
+            (recur))))))
 
+(defn stop []
+  (swap! system* assoc :disconnect! true))
 
-(def fs-gen0 #{})
-(def fs-gen1 #{"my/dir/file_a.txt"})
-(def fs-gen2 #{"my/dir/file_a.txt" "my/dir/dir2/file_b.txt"})
-(def fs-gen3 #{"my/dir/dir2/file_b.txt" "my/dir/dir2/file_c.txt" })
+(defn run
+  "Runs the main-loop on another thread so we don't block the repl"
+  [config]
+  (future (main-loop config)))
 
-(defn check-changes [prev-gen cur-gen]
-  (let [[deleted added _] (diff prev-gen cur-gen)]
-    {:deleted deleted
-     :added added}))
+(comment
+  ;; for repl-driven experimentation
 
-(check-changes fs-gen0 fs-gen1)
+  (def example-config
+    {:interval 1000
+     :watcher-type :local
+     :connection-settings
+     {:root-directory "test/examplefs"}})
 
-;; behaviours
-(defprotocol Behaviours
-  (print-filepath [this] "Method to print filepath"))
+  (run example-config)
 
+  (stop)
 
-;; A record per filesystem type
-(defrecord File [path]
-  Behaviours
-  (print-filepath [this] (println (str "file: " (:path this)))))
+  @system*
 
+  (spit "test/examplefs/newfile" "")
 
-;; rules
-(defrule rule-a
-  "Behaviour A is triggered if a new file as a given prefix"
-  [?file <- File (string/starts-with? path "/some/subdirectory")]
-  => (print-filepath ?file))
+  (spit "test/examplefs/rule1" "")
 
-(-> (mk-session)
-    (insert (->File "/someother/dir/file.txt")
-            (->File "/some/subdirectory.file2.txt"))
-    (fire-rules))
+  (io/delete-file "test/examplefs/newfile")
 
+  (io/delete-file "test/examplefs/rule1"))
 
