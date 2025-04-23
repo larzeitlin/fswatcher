@@ -3,7 +3,7 @@
    [fs-watcher.watchers.local-filesystem :as watchers.local]
    [fs-watcher.watchers.s3 :as watchers.s3]
    [fs-watcher.watcher :as watcher]
-   [fs-watcher.rules :as rules]
+   [fs-watcher.rulesets :as rulesets]
    [clojure.tools.logging :as log]))
 
 ;; Erroring thread should not silently die
@@ -20,12 +20,12 @@
    :s3 watchers.s3/->S3BucketWatcher})
 
 (defn main-loop
-  [{:keys [interval connection-settings watcher-type]}]
+  [{:keys [interval connection-settings watcher-type ruleset]}]
   (reset! system* {:fs-state #{}
                    :interval interval
                    :connection-settings connection-settings
                    :watcher-type watcher-type
-                   :rules rules/rules})
+                   :rules (rulesets/ruleset-kw->rules ruleset)})
   (let [watcher-constructor (watcher-type->constructor watcher-type)
         fs (watcher-constructor system*)]
     (watcher/connect fs)

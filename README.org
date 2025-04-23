@@ -14,8 +14,6 @@ allow for further conversation and design, development work on this project.
 - Any concept of moving or renaming files. All mutations are expressed as
   creates and deletes.
 
-* Documents
-
 * Overview
 ** High-level flow
 
@@ -122,8 +120,10 @@ have the system* in scope)
 
 **** Rulesets
 Rulesets are collection of rules.
-Each ruleset has it's own namespace eg: ~fs-watcher.rulesets.ruleset1~.
-The ruleset used by a system is set by configuration.
+Each ruleset has it's own namespace eg: ~fs-watcher.rulesets.ruleset1~ and then added to the map
+in ~fs-watcher.rulesets~ with a keyword to refer to it.
+
+[[file:src/fs_watcher/rulesets.clj][rulesets]]
 
 ** Running
 *** Configuration
@@ -252,6 +252,5 @@ with ~clojure.spec.test/check~ to improve unit test coverage.
 - [ ] build script (maybe)
 - [ ] describe CI build and e2e testing more
 - [ ] diagram in README
-- [ ] move rule to ruleset ns
   
  
