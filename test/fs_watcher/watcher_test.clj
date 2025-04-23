@@ -6,7 +6,7 @@
    [clojure.string :as string]
    [clojure.data :as data]))
 
-(deftest apply-rules-test
+(deftest ^:unit apply-rules-test
   (testing "single rule"
     (let [action-target (atom :unchanged)
           rules [{:condition (fn [prev-gen new-gen]

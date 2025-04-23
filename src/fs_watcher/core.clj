@@ -3,7 +3,6 @@
    [fs-watcher.watchers.local-filesystem :as watchers.local]
    [fs-watcher.watchers.s3 :as watchers.s3]
    [fs-watcher.watcher :as watcher]
-   [clojure.java.io :as io]
    [fs-watcher.rules :as rules]
    [clojure.tools.logging :as log]))
 
@@ -42,48 +41,6 @@
   (swap! system* assoc :disconnect! true))
 
 (defn run
-  "Runs the main-loop on another thread so we don't block the repl"
+  "Runs the main-loop on another thread so we don't block the REPL."
   [config]
   (future (main-loop config)))
-
-(comment
-  ;; for repl-driven experimentation
-
-  (def example-config-local
-    {:interval 1000
-     :watcher-type :local
-     :connection-settings
-     {:root-directory "test/examplefs"}})
-
-  (def example-config-s3-localstack
-    {:interval 1000
-     :watcher-type :s3
-     :connection-settings
-     {:credentials {:access-key-id "test"
-                    :secret-access-key "test"}
-      :s3-client-settings {:api :s3
-                           :region "us-east-1"
-                           :endpoint-override {:protocol :http
-                                               :hostname "localhost"
-                                               :port  4566}}
-      :bucket-name "testbucket"}})
-
-
-  
-  (run example-config-local)
-
-
-  (run example-config-s3-localstack)
-
-  (stop)
-
-  @system*
-
-  (spit "test/examplefs/newfile" "")
-
-  (spit "test/examplefs/rule1" "")
-
-  (io/delete-file "test/examplefs/newfile")
-
-  (io/delete-file "test/examplefs/rule1"))
-

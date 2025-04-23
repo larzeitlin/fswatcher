@@ -14,10 +14,12 @@
   return a boolean indicating success of connection."
   [{:keys [system*]} connect-fn]
   (let [connected? (connect-fn @system*)]
+    (print connected?)
     (println "connecting to filesystem")
     (swap! system* assoc
            :connected? connected?
-           :disconnect! false)))
+           :disconnect! false)
+    connected?))
 
 (defn wrap-poll
   "Wraps a poll-fn to handle updating system and
@@ -29,7 +31,8 @@
         new-gen (poll-fn @system*)
         prev-gen fs-state]
     (apply-rules rules prev-gen new-gen)
-    (swap! system* assoc :fs-state new-gen)))
+    (swap! system* assoc :fs-state new-gen)
+    new-gen))
 
 (defn wrap-disconnect
   "Wraps a disconnect-fn to handle updating system.
@@ -42,7 +45,7 @@
            :disconnect! true
            :connected? (not disconnected?))
 
-    :disconnected))
+    disconnected?))
 
 (defprotocol FileSystemWatcher
   (connect [this] "connect to the tracked filesystem.")
