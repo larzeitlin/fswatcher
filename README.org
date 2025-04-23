@@ -11,7 +11,6 @@ allow for further conversation and design, development work on this project.
 
 *** Out of scope
 - Comparing across different file-systems.
-- All *write* actions on the file-systems.
 - Any concept of moving or renaming files. All mutations are expressed as
   creates and deletes.
 
@@ -62,9 +61,7 @@ Use of, for example, ~clojure.data.diff~ can be useful in conditions and actions
 #+begin_src clojure
 {:condition (fn [prev new] ...)
  :action (fn [prev new] ...)}
-
 #+end_src
-
 
 **** Condition
 A predicate that compares the new and previous file-system state. If the condition is met
@@ -91,6 +88,7 @@ So far I have provided some examples of how to test. Full coverage is not comple
 The layers of testing are:
 - unit
 - integration
+- system
 - end-to-end
 
 ** Unit tests
@@ -110,14 +108,20 @@ This slightly higher level test runs over the connection between two subsystems.
 Here the main integrations we are interested in are between our component and the target file-systems.
 For our local file-system this is rather simple, we can check the watcher methods when pointed at a
 local directory.
+
+TODO: add local file-system integration test
+
 We also have an example of the more complex case of the S3 watcher integration test. This is more of
 a pseudo-integration test since it runs against a ~localstack~ version of S3.
 
 [[file:test/watchers/s3_test.clj][S3 Integration tests]]
 
+** System test
+System tests run the whole system locally, testing the operation of the component as a whole using
+it's public interface.
+
 ** End-to-end tests
-End-to-end tests can be run all-local but more confidence is given by running these sorts of tests
-against a deployed system in a test environment.
+End to end tests are run during CI in a deployed test environment against remote filesystems.
 
 * Evolution
 This is a first pass at a generic file-system watcher component with swappable backends,
