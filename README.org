@@ -24,7 +24,6 @@ allow for further conversation and design, development work on this project.
 Add a diagram here.
 #+end_src
 
-
 *** The system
 The system is a running instance of this component.
 
@@ -114,6 +113,8 @@ local directory.
 We also have an example of the more complex case of the S3 watcher integration test. This is more of
 a pseudo-integration test since it runs against a ~localstack~ version of S3.
 
+[[file:test/watchers/s3_test.clj][S3 Integration tests]]
+
 ** End-to-end tests
 End-to-end tests can be run all-local but more confidence is given by running these sorts of tests
 against a deployed system in a test environment.
@@ -126,6 +127,14 @@ opportunities:
 - Allow for multiple concurrent systems running on the same component, each with it's own ruleset and
   other configurations.
 - Remote REPL access, allowing for runtime debugging and runtime edits to configuration.
+
+* Design decisions
+** Flat hierarchy
+In the current implementation a file-system is just a flat set of pathed filenames (like how S3 works).
+The structure of the data does not replicate the directory hierarchy of the file-system. However, the
+choice of ~java.io.File~ objects to represent the files provides a convenient interface to parts of the
+filename and path should it be needed.
+
 
 * Trade-offs and Improvement Opportunities
 ** Ruleset creation requires code changes
@@ -188,8 +197,6 @@ With well chosen specifications we could then use generative testing
 with ~clojure.spec.test/check~ to improve unit test coverage.
 
 * TODO (for real for real):
-- [ ] add s3 watcher
-- [ ] example localstack test
 - [ ] test runner
 - [ ] build script (maybe)
 - [ ] describe CI build and e2e testing more
