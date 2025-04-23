@@ -1,20 +1,30 @@
 #+TITLE: File System Watcher
 * Intro
-** Purpose
-This project is a service component for watching different types of file-systems.
-- It uses polling to stay up-to-date with the target file-system.
-- It is designed to be extensible to new file-system types.
-- It supports configuration to choose polling interval.
-- It supports actions based on rules, comparing the previous and new state of
-  the target file-system.
+This File System watcher is an extensible Clojure component for monitoring changes to
+file-systems, supporting a range of file-system types (for example: local, s3). It
+uses polling and a rules-based engine to trigger actions on changes. It is designed
+for extensibility and configurability.
+
 ** Scope
-This project lays the groundwork but it not complete. The intention is to allow for
-discussion and adaptation before completing the implementation.
+This project lays the groundwork but it not complete. It provides a starting point to
+allow for further conversation and design, development work on this project.
+
+*** Out of scope
+- Comparing across different file-systems.
+- All *write* actions on the file-systems.
+- Any concept of moving or renaming files. All mutations are expressed as
+  creates and deletes.
 
 * Documents
 
 * Overview
 ** High-level Architecture
+
+#+begin_src ascii
+Add a diagram here.
+#+end_src
+
+
 *** The system
 The system is a running instance of this component.
 
@@ -109,28 +119,51 @@ End-to-end tests can be run all-local but more confidence is given by running th
 against a deployed system in a test environment.
 
 * Evolution
-So far we have a starting point for a generic file-system watcher component with swappable backends,
-interval configuration, rule customization. Once this is complete, there are several ways to improve
-or extend this:
-- Allow for multiple concurrent systems running on the same component.
-- REPL access to hot-swap configuration such as rulesets or interval.
+This is a first pass at a generic file-system watcher component with swappable backends,
+interval configuration, rule customization.
+Once this is complete, there are several ways enhancement
+opportunities:
+- Allow for multiple concurrent systems running on the same component, each with it's own ruleset and
+  other configurations.
+- Remote REPL access, allowing for runtime debugging and runtime edits to configuration.
 
 * Trade-offs and Improvement Opportunities
-** Creation of rulesets requires code changes
-While the choice of ruleset is configurable at invocation, the content of the rulesets is defined
-in code, so we have to make code changes to add new rules. If instead we had a rules DSL allowing us
-to create rules in configuration this would allow the caller to create custom rules. However,
-Such a DSL would limit the rules-space (or add a lot of complexity).The right choice here really
-depends on the context.
+** Ruleset creation requires code changes
+*** Limitation
+Currently, rulesets are defined directly in code.
+Adding or modifying rules necessitates a code change and redeployment,
+which can slow down iteration and limit flexibility for end users.
+*** Potential improvement
+Develop a domain-specific language or configuration format for defining rules.
+This would allow rules to be specified in external files or configuration,
+empowering users to create or modify rules without touching code.
+**** Trade-off
+introducing a DSL could limit the expressiveness of rules or increase system complexity.
+The right balance depends on the target audience and use cases
+
+*** Impact
+This approach restricts the ability of non-developers or operators to
+create or adjust rules on the fly, potentially reducing the system's adaptability.
 
 ** Initial file-system representation
-With the current setup we may accidentally get behavior that we don't want on the first loop, when
-we go from nothing in our file-system representation to something. While this can be somewhat mitigated
-in rules definitions, we might want to configure special behavior for the first loop.
+*** Limitation
+On the first polling loop, the system transitions from an empty state to the current
+file-system snapshot. This can trigger unintended rule actions,
+as the initial state is not always meaningful.
+*** Potential improvement
+- Allow rules to distinguish between startup and steady-state polling cycles.
+- Configuration to prevent actions triggering on first loop.
 
-** Persistence
-If the component needs to restart the previous state will be forgotten. Depending on our context we
-might want to store the file-system representation in a database.
+** Lack of State Persistence
+*** Limitation
+File-system state is not persisted between restarts. If the watcher is stopped, crashes or restarts
+all prior state is lost.
+
+*** Impact
+Missing or duplicate actions caused by restarts.
+
+*** Potential Improvements
+Add persistent storage for the file-system state.
 
 ** More details in the file-system representation
 At the moment we just use a set of ~java.io.File~ objects to represent the previous and new state of
@@ -138,9 +171,17 @@ the file-system. This is simple and convenient, but we could add more details (c
 edit time, file contents, more historical generations of the file-system state)
 depending on requirements.
 
-** Spec, enforce data shapes
-Rules, rulesets, configs, function signatures for the ~FileSystemWatcher~ methods and wrappers
-could all benefit from spec checks.
+** Data Shape Enforcement
+*** Limitation
+There is no formal specification or validation of the shapes of rules, rulesets,
+configurations, or watcher method signatures.
+
+*** Impact
+More opportunities for bugs and mistakes as the component is extended.
+
+*** Potential Improvement
+Use Clojure spec or another schema validation tool to specify and check critical
+functions and data shapes.
 
 ** Generative testing
 With well chosen specifications we could then use generative testing
