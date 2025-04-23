@@ -1,12 +1,12 @@
 #+TITLE: File System Watcher
 * Intro
 ** Purpose
-This project is a service component for watching different types of filesystems.
-- It uses polling to stay up-to-date with the target filesystem.
-- It is designed to be extensible to new filesystem types.
+This project is a service component for watching different types of file-systems.
+- It uses polling to stay up-to-date with the target file-system.
+- It is designed to be extensible to new file-system types.
 - It supports configuration to choose polling interval.
 - It supports actions based on rules, comparing the previous and new state of
-  the target filesystem.
+  the target file-system.
 ** Scope
 This project lays the groundwork but it not complete. The intention is to allow for
 discussion and adaptation before completing the implementation.
@@ -14,20 +14,20 @@ discussion and adaptation before completing the implementation.
 * Documents
 
 * Overview
-** High-level Arcetecture
+** High-level Architecture
 *** The system
 The system is a running instance of this component.
 
-In ~fs-watcher.core~ where we have an entrypoint with ~run~, which creates a system and
+In ~fs-watcher.core~ where we have an entry-point with ~run~, which creates a system and
 starts polling on a thread by using a ~future~. This keeps the REPL unblocked and also
-would allow us to easly support running multiple, concurrent systems if that becomes a
+would allow us to easily support running multiple, concurrent systems if that becomes a
 requirement at a later date.
 
 The state of the system is held in the ~system*~ atom.
 
 The system is updated by ~main-loop~ which triggers polls regulated configured interval.
 
-The system is configured to use a ~watcher~ type based on the filesystem type.
+The system is configured to use a ~watcher~ type based on the file-system type.
 
 *** Watchers
 A ~FileSystemWatcher~ protocol is defined in ~fs-watcher.watcher~ with methods: ~connect~,
@@ -37,8 +37,8 @@ the ~system*~ atom. See comments on each wrapper for more details:
 
 [[file:src/fs_watcher/watcher.clj][FileSystemWatcher]]
 
-Watchers are instanciated as records that implment the ~FileSystemWatcher~ protocol.
-There is a watcher ~defrecord~ for each type of filesystem supported. For example:
+Watchers are instantiated as records that implement the ~FileSystemWatcher~ protocol.
+There is a watcher ~defrecord~ for each type of file-system supported. For example:
 
 [[file:src/fs_watcher/watchers/local_filesystem.clj][LocalFileSystemWatcher]]
 
@@ -47,7 +47,7 @@ each of the methods.
 
 *** Rulesets and Rules
 A ruleset is a collection of rules. A rule is a map of ~:condition~ and ~:action~.
-both of these are functions that take the previous and new state of the filesystem.
+both of these are functions that take the previous and new state of the file-system.
 
 Use of, for example, ~clojure.data.diff~ can be useful in conditions and actions.
 #+begin_src clojure
@@ -58,13 +58,13 @@ Use of, for example, ~clojure.data.diff~ can be useful in conditions and actions
 
 
 **** Condition
-A predicate that compares the new and previous filesystem state. If the condition is met
-the action will be triggered. Comparison of the previous and new state of the filesystem
+A predicate that compares the new and previous file-system state. If the condition is met
+the action will be triggered. Comparison of the previous and new state of the file-system
 gives a broad space of conditions.
 
 **** Action
 Simply a function that is triggered when the condition is met. It also takes the previous
-and new state of the filesystem since this information may be useful. (Note, maybe it should just
+and new state of the file-system since this information may be useful. (Note, maybe it should just
 have the system* in scope)
 
 **** Rulesets
@@ -88,9 +88,9 @@ The layers of testing are:
 These test individual functions with example data. Here we are using unit tests as much
 for documentation as for ensuring correctness.
 
-My personal preference is to avoid heavy, unneccecery unit testing,
-which adds a maintanance burden. Unit tests should only be for functions that
-have enough complexity to warrent further documentation or checking.
+My personal preference is to avoid heavy, unnecessary unit testing,
+which adds a maintenance burden. Unit tests should only be for functions that
+have enough complexity to warrant further documentation or checking.
 
 Example of unit testing is the tests for ~fs-watcher/apply-rules~ which can be found here:
 
@@ -98,24 +98,24 @@ Example of unit testing is the tests for ~fs-watcher/apply-rules~ which can be f
 
 ** Integration tests
 This slightly higher level test runs over the connection between two subsystems.
-Here the main integrations we are interested in are between our component and the target filesystems.
-For our local filesystem this is rather simple, we can check the watcher methods when pointed at a
+Here the main integrations we are interested in are between our component and the target file-systems.
+For our local file-system this is rather simple, we can check the watcher methods when pointed at a
 local directory.
 We also have an example of the more complex case of the S3 watcher integration test. This is more of
-a psudo-integration test since it runs against a ~localstack~ version of S3.
+a pseudo-integration test since it runs against a ~localstack~ version of S3.
 
 ** End-to-end tests
 End-to-end tests can be run all-local but more confidence is given by running these sorts of tests
 against a deployed system in a test environment.
 
 * Evolution
-So far we have a starting point for a generic filesystem watcher component with swappable backends,
+So far we have a starting point for a generic file-system watcher component with swappable backends,
 interval configuration, rule customization. Once this is complete, there are several ways to improve
 or extend this:
 - Allow for multiple concurrent systems running on the same component.
-- REPL access to hot-swap confiuration such as rulesets or interval.
+- REPL access to hot-swap configuration such as rulesets or interval.
 
-* Trade-offs and Improvement Oppertunities
+* Trade-offs and Improvement Opportunities
 ** Creation of rulesets requires code changes
 While the choice of ruleset is configurable at invocation, the content of the rulesets is defined
 in code, so we have to make code changes to add new rules. If instead we had a rules DSL allowing us
@@ -123,19 +123,19 @@ to create rules in configuration this would allow the caller to create custom ru
 Such a DSL would limit the rules-space (or add a lot of complexity).The right choice here really
 depends on the context.
 
-** Initial filesystem representation
-With the current setup we may accidently get behaviour that we don't want on the first loop, when
-we go from nothing in our filesystem representation to something. While this can be somewhat mitigated
-in rules definitions, we might want to configure special behaviour for the first loop.
+** Initial file-system representation
+With the current setup we may accidentally get behavior that we don't want on the first loop, when
+we go from nothing in our file-system representation to something. While this can be somewhat mitigated
+in rules definitions, we might want to configure special behavior for the first loop.
 
-** Persistance
+** Persistence
 If the component needs to restart the previous state will be forgotten. Depending on our context we
-might want to store the filesystem representation in a database.
+might want to store the file-system representation in a database.
 
-** More details in the filesystem representation
+** More details in the file-system representation
 At the moment we just use a set of ~java.io.File~ objects to represent the previous and new state of
-the filesystem. This is simple and convenient, but we could add more details (creation time,
-edit time, file contents, more historical generations of the filesystem state)
+the file-system. This is simple and convenient, but we could add more details (creation time,
+edit time, file contents, more historical generations of the file-system state)
 depending on requirements.
 
 ** Spec, enforce data shapes
