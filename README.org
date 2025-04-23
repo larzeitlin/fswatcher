@@ -187,3 +187,13 @@ functions and data shapes.
 With well chosen specifications we could then use generative testing
 with ~clojure.spec.test/check~ to improve unit test coverage.
 
+* TODO (for real for real):
+- [ ] add s3 watcher
+- [ ] example localstack test
+- [ ] test runner
+- [ ] build script (maybe)
+- [ ] describe CI build and e2e testing more
+- [ ] diagram in README
+- [ ] move rule to ruleset ns
+  
+ 
