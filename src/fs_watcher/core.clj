@@ -1,6 +1,7 @@
 (ns fs-watcher.core
   (:require
    [fs-watcher.watchers.local-filesystem :as watchers.local]
+   [fs-watcher.watchers.s3 :as watchers.s3]
    [fs-watcher.watcher :as watcher]
    [clojure.java.io :as io]
    [fs-watcher.rules :as rules]
@@ -16,7 +17,8 @@
   (atom {}))
 
 (def watcher-type->constructor
-  {:local watchers.local/->LocalFileSystemWatcher})
+  {:local watchers.local/->LocalFileSystemWatcher
+   :s3 watchers.s3/->S3BucketWatcher})
 
 (defn main-loop
   [{:keys [interval connection-settings watcher-type]}]
@@ -47,13 +49,31 @@
 (comment
   ;; for repl-driven experimentation
 
-  (def example-config
+  (def example-config-local
     {:interval 1000
      :watcher-type :local
      :connection-settings
      {:root-directory "test/examplefs"}})
 
-  (run example-config)
+  (def example-config-s3-localstack
+    {:interval 1000
+     :watcher-type :s3
+     :connection-settings
+     {:credentials {:access-key-id "test"
+                    :secret-access-key "test"}
+      :s3-client-settings {:api :s3
+                           :region "us-east-1"
+                           :endpoint-override {:protocol :http
+                                               :hostname "localhost"
+                                               :port  4566}}
+      :bucket-name "testbucket"}})
+
+
+  
+  (run example-config-local)
+
+
+  (run example-config-s3-localstack)
 
   (stop)
 
