@@ -17,10 +17,57 @@ allow for further conversation and design, development work on this project.
 * Documents
 
 * Overview
-** High-level Architecture
+** High-level flow
 
 #+begin_src ascii
-Add a diagram here.
+                +------------------+
+                |   fs-watcher     |
+                +------------------+
+                         |
+                         v
+          +-------------------------------+
+          |    init system from config    |
+          +-------------------------------+
+                         |
+                         v
+          +-------------------------------+
+          |      Watcher Selection        |
+          |       eg: local or s3         |
+          +-------------------------------+
+                         |
+                         v
+          +-------------------------------+
+          |            Connect            |
+          +-------------------------------+
+                         |
+                         v
+                    +-----------+
+                    |           |
+                    | main loop |<----------+
+                    |           |           |
+                    +-----------+           |
+                         |                  |
+                         v                  |
+          +-------------------------------+ |
+          |       Poll for changes        | |
+          +-------------------------------+ |
+                         |                  |
+                         v                  |
+          +-------------------------------+ |
+          |     Process file changes      | |
+          |       and apply rules         | |
+          +-------------------------------+ |
+                         |                  |
+                         v                  |
+          +-------------------------------+ |
+          |   Continue unless disconnect  |-+
+          +-------------------------------+
+                         |
+                         v
+          +-------------------------------+
+          |          Disconnect           |
+          +-------------------------------+
+
 #+end_src
 
 *** The system
