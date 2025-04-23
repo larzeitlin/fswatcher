@@ -96,7 +96,9 @@ There is a watcher ~defrecord~ for each type of file-system supported. For examp
 [[file:src/fs_watcher/watchers/local_filesystem.clj][LocalFileSystemWatcher]]
 
 We can see that this implements the FileSystemWatcher protocol, using the given wrappers for
-each of the methods.
+each of the methods. This is also true of the equivilant for S3
+
+[[file:src/fs_watcher/watchers/s3.clj][S3FileSystemWatcher]]
 
 *** Rulesets and Rules
 A ruleset is a collection of rules. A rule is a map of ~:condition~ and ~:action~.
@@ -169,6 +171,63 @@ it's public interface.
 
 ** End-to-end tests
 End to end tests are run during CI in a deployed test environment against remote filesystems.
+
+* CI
+The continuous integration process is not yet implemented, but here is an overview of the proposed
+flow. A trunk-based git workflow is assumed.
+
+#+begin_src ascii
++----------------------------+
+| Manually Run Local Tests   |
+|      Before Push           |
++------------+---------------+
+             |
+             v
++----------------------------+
+|        Push to Trunk       |
++------------+---------------+
+             |
+             v
++----------------------------+
+|     Trigger Test Build     |
++------------+---------------+
+             |
+             v
++--------------+-------------+
+|              | PARALLEL    |
+| +------------v-----------+ |
+| |     Run Unit Tests     | |
+| +------------------------+ |
+|              |             |
+| +------------v-----------+ |
+| | Run Integration Tests  | |
+| +------------------------+ |
++--------------+-------------+
+             |
+             v
++----------------------------+
+|     Run System Tests       |
++------------+---------------+
+             |
+             v
++----------------------------+
+|       Run E2E Tests        |
++------------+---------------+
+             |
+             v
++----------------------------+
+|    Teardown Test Env       |
++------------+---------------+
+             |
+             v
++----------------------------+
+|      Pipeline Clear        |
+|                            |
+| [SUCCESS] → Deploy to Prod |
+| [FAILURE] → Notify Team    |
++----------------------------+
+#+end_src
+
 
 * Evolution
 This is a first pass at a generic file-system watcher component with swappable backends,
@@ -247,10 +306,8 @@ functions and data shapes.
 With well chosen specifications we could then use generative testing
 with ~clojure.spec.test/check~ to improve unit test coverage.
 
-* TODO (for real for real):
+* to dos:
 - [ ] test runner
-- [ ] build script (maybe)
+- [ ] system test
 - [ ] describe CI build and e2e testing more
-- [ ] diagram in README
   
- 

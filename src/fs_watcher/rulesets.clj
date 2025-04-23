@@ -3,5 +3,8 @@
   (:require [fs-watcher.rulesets.ruleset1 :as rs1]))
 
 (def ruleset-kw->rules
-  {:ruleset1 rs1/rules})
-;; def new rulesets here
+  {:ruleset1 rs1/rules
+
+;; add new rulesets here
+
+   })
