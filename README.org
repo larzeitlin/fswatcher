@@ -177,7 +177,7 @@ It must include:
   This is determined by the watcher-type.
 
 * Polling mechanism
-We have a very simple loop and ~Thread/sleep~ polling mechaniam. 
+We have a very simple loop and ~Thread/sleep~ polling mechanism. 
 #+begin_src clojure
 (loop []
  (if (:disconnect! @system*)
