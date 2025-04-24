@@ -307,7 +307,10 @@ With well chosen specifications we could then use generative testing
 with ~clojure.spec.test/check~ to improve unit test coverage.
 
 * to dos:
-- [ ] test runner
-- [ ] system test
-- [ ] describe CI build and e2e testing more
+** TODO: update polling mechanism to use threads etc
+** TODO: write a system test
+** TODO: Add build / invocation args
+** TODO: more details about actions, polling in doc
+** TODO: reformat doc to match the requirements
+** TODO: notes about error handling, logging, scaling
   
