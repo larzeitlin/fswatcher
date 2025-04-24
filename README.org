@@ -238,7 +238,7 @@ a pseudo-integration test since it runs against a ~localstack~ version of S3.
 
 ** System test
 System tests run the whole system locally, testing the operation of the component as a whole using
-its public interface. This could be easly achived with a sript that envokes the component with a
+its public interface. This could be easly achived with a script that envokes the component with a
 ruleset where the actions write to an external file and then creates/deletes files in the filesystem.
 Once the test is run the contents of this file can be checked against an expected output.
 
