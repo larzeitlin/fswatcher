@@ -389,6 +389,6 @@ Should add a shutdown hook to ensure that ~fs-watcher.core/stop~ is called when 
 receives a SIGINT or SIGTERM. Just didn't get around to it.
 
 ** Error handling and logging
-Handling the cases of failed connection and poll events expecially is important and has
+Handling the cases of failed connection and poll events especially is important and has
 not been addressed so far in this project. Robust logging with configurable log levels
 will also be needed.
