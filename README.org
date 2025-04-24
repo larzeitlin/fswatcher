@@ -68,7 +68,7 @@ allow for further conversation and design, development work on this project.
 
 #+end_src
 
-*** The system
+** The system
 The system is a running instance of this component.
 
 In ~fs-watcher.core~ where we have an entry-point with ~run~, which creates a system and
@@ -76,13 +76,15 @@ starts polling on a thread by using a ~future~. This keeps the REPL unblocked an
 would allow us to easily support running multiple, concurrent systems if that becomes a
 requirement at a later date.
 
-The state of the system is held in the ~system*~ atom.
+The state of the system is held in the ~system*~ atom under the key ~:fs-state~. This is
+simply a set of ~java.io.File~ objects representing all the non-directory files of the
+file-system as of the last poll event.
 
 The system is updated by ~main-loop~ which triggers polls regulated configured interval.
 
 The system is configured to use a ~watcher~ type based on the file-system type.
 
-*** Watchers
+** Watchers
 A ~FileSystemWatcher~ protocol is defined in ~fs-watcher.watcher~ with methods: ~connect~,
 ~poll~ and ~disconnect~. The same namespace also provides wrappers for each of these methods
 so that implementations of ~FileSystemWatcher~ do not have to re-implement interactions with
@@ -100,7 +102,7 @@ each of the methods. This is also true of the equivilant for S3
 
 [[file:src/fs_watcher/watchers/s3.clj][S3FileSystemWatcher]]
 
-*** Rulesets and Rules
+** Rulesets and Rules
 A ruleset is a collection of rules. A rule is a map of ~:condition~ and ~:action~.
 both of these are functions that take the previous and new state of the file-system.
 
@@ -110,25 +112,94 @@ Use of, for example, ~clojure.data.diff~ can be useful in conditions and actions
  :action (fn [prev new] ...)}
 #+end_src
 
-**** Condition
+*** Condition
 A predicate that compares the new and previous file-system state. If the condition is met
 the action will be triggered. Comparison of the previous and new state of the file-system
 gives a broad space of conditions.
 
-**** Action
-Simply a function that is triggered when the condition is met. It also takes the previous
-and new state of the file-system since this information may be useful. (Note, maybe it should just
-have the system* in scope)
+**** Example: condition of a file added to a given directory
+Since the previous and new state of the filesystem are represented by sets of ~java.io.File~
+objects, we can check if a file belongs to a given directory by checking what the path starts
+with:
 
-**** Rulesets
+#+begin_src clojure
+#(string/starts-with? (.getAbsolutePath my-file) "my/important/directory")
+#+end_src
+
+We can check which files have been added by comparing the old state to the new state:
+
+#+begin_src clojure
+(let [[deleted added _] (clojure.data/diff prev-state new-state)]
+;; Do something
+)
+#+end_src
+
+...putting it all together into a well-formed ~:condition~ function:
+
+#+begin_src clojure
+(fn [prev-gen new-gen]
+  (let [[_deleted added _] (diff prev-gen new-gen)]
+    (->> added
+         (filter #(string/starts-with? (.getAbsolutePath %) "my/important/directory"))
+         seq)))
+#+end_src
+
+*** Action
+Simply a function that is triggered when the condition is met. It also takes the previous
+and new state of the file-system. 
+
+Let's add an ~:action~ to the above ~:condition~ so we have a complete rule.
+An action can be any Clojure function of the previous and new filesystem state.
+
+#+begin_src clojure
+{:condition (fn [prev-gen new-gen]
+                 (let [[_deleted added _] (diff prev-gen new-gen)]
+                   (->> added
+                        (filter #(string/starts-with? (.getAbsolutePath %) "my/important/directory"))
+                        seq)))
+ :action (fn [_ _] (println "An important file was added!"))}
+#+end_src
+
+*** Rulesets
 Rulesets are collection of rules.
 Each ruleset has it's own namespace eg: ~fs-watcher.rulesets.ruleset1~ and then added to the map
 in ~fs-watcher.rulesets~ with a keyword to refer to it.
 
 [[file:src/fs_watcher/rulesets.clj][rulesets]]
 
-** Running
-*** Configuration
+* Configuration
+Configuration is simply the ~config~ map that the entrypoint function ~run~ is called with.
+It must include:
+- ~:interval~ the number of miliseconds that the poller sleeps.
+- ~:ruleset~ a keyword refering to the ruleset that will be applied.
+- ~:watcher-type~ a keyword refering to the watcher type. This will depend on the underlying file-system.
+- ~:connection-settings~ any settings the watcher needs to connect to the filesystem.
+  This is determined by the watcher-type.
+
+* Polling mechanism
+We have a very simple loop and ~Thread/sleep~ polling mechaniam. 
+#+begin_src clojure
+(loop []
+ (if (:disconnect! @system*)
+   (watcher/disconnect fs)
+   ;; else continue 
+   (do (Thread/sleep interval)
+       (watcher/poll fs)
+       (recur))))  
+#+end_src
+
+There are several potential issues and oppertunities to improve this.
+** Rule execution coupled to watcher/poll
+These two distinct concepts should be seperated out. At the moment
+the rule application is somewhat hidden.
+** Polling accidentily slows down
+Situations where the poll method takes a long time will cause the
+poll frequency to reduce. For example large file-systems that take
+a long time to read, or costly actions.
+This could be mitigated by running the actions in seperate threads (using a future).
+Using ~clojure.core.asyc/timeout~ rather than a loop could also help more closely
+honour the configured interval but runs the risk of creating race conditions on low
+interval values.
 
 * Testing strategy
 A layered approach to testing.
@@ -167,10 +238,13 @@ a pseudo-integration test since it runs against a ~localstack~ version of S3.
 
 ** System test
 System tests run the whole system locally, testing the operation of the component as a whole using
-it's public interface.
+its public interface. This could be easly achived with a sript that envokes the component with a
+ruleset where the actions write to an external file and then creates/deletes files in the filesystem.
+Once the test is run the contents of this file can be checked against an expected output.
 
 ** End-to-end tests
-End to end tests are run during CI in a deployed test environment against remote filesystems.
+End to end tests are run during CI in a deployed test environment against remote filesystems. The
+actual test content could be the same as the system tests.
 
 * CI
 The continuous integration process is not yet implemented, but here is an overview of the proposed
@@ -228,6 +302,10 @@ flow. A trunk-based git workflow is assumed.
 +----------------------------+
 #+end_src
 
+** Irregular testing
+We may want to use performance testing to identify the limits at which this component no
+longer operates reasonably. This could be done by gradually ramping up to larger and larger
+test file-systems for example.
 
 * Evolution
 This is a first pass at a generic file-system watcher component with swappable backends,
@@ -306,11 +384,11 @@ functions and data shapes.
 With well chosen specifications we could then use generative testing
 with ~clojure.spec.test/check~ to improve unit test coverage.
 
-* to dos:
-** TODO: update polling mechanism to use threads etc
-** TODO: write a system test
-** TODO: Add build / invocation args
-** TODO: more details about actions, polling in doc
-** TODO: reformat doc to match the requirements
-** TODO: notes about error handling, logging, scaling
-  
+** Shutdown hook
+Should add a shutdown hook to ensure that ~fs-watcher.core/stop~ is called when the JVM
+receives a SIGINT or SIGTERM. Just didn't get around to it.
+
+** Error handling and logging
+Handling the cases of failed connection and poll events expecially is important and has
+not been addressed so far in this project. Robust logging with configurable log levels
+will also be needed.
